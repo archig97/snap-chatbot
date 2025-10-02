@@ -1,0 +1,19 @@
+{
+    "name": "ragapi-trial",
+    "version": "1.0.0",
+    "type": "module",
+    "main": "src/server.js",
+    "scripts": {
+        "dev": "node src/server.js",
+        "ingest": "node src/ingest.js"
+    },
+    "dependencies": {
+        "@langchain/core": "^0.3.78",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "fast-xml-parser": "^5.2.5",
+        "langchain": "^0.3.35",
+        "pdf-parse": "^1.1.1",
+        "pdfjs-dist": "^5.4.149"
+    }
+}
