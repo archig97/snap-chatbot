@@ -5,8 +5,8 @@ import { formatContexts, formatExamples } from "./formatters.js";
 
 const OLLAMA = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const GEN_MODEL = process.env.GEN_MODEL || 'llama3.2:3b';
-const TOP_K = parseInt(process.env.TOP_K || '5', 10);
-const SIM_THRESHOLD = Number(process.env.SIM_THRESHOLD || '0.10');
+const TOP_K = parseInt(process.env.TOP_K || '3', 10);
+const SIM_THRESHOLD = Number(process.env.SIM_THRESHOLD || '0.20');
 
 async function embed(text, embModel) {
 const res = await fetch(`${OLLAMA}/api/embeddings`, {
@@ -24,58 +24,139 @@ return json.embedding;
 const userExamples = [
     {
       question: "How do I create a spinning effect for my sprite?",
-      answer: `Make the sprite rotate by repeatedly changing its direction (or using "turn" blocks) — here's a simple, testable script.
+      answer: `To make a sprite spin, think about **changing its direction continuously** or **turning by a small angle repeatedly**. The key idea is to run a loop that updates rotation over time.
 
-Assuming your sprite is “Sprite1” and rotationStyle is "all around", use one of these options:
+\`\`\`snap-outline
+Event - when green flag clicked
+Control - [loop continuously OR repeat N times]
+  Motion - [turn clockwise or anticlockwise by a small angle]
+  Control - [wait briefly for smoothness]
+\`\`\`
 
-Events > when green flag clicked
-Control > forever
-Motion > turn clockwise (15) degrees
-Or for smoother rotation:
+- Adjust the angle to control how fast it spins.  
+- Use a repeat block instead of forever if you want a fixed number of rotations.  
+- If you need easing or special patterns, think about **where you can vary the angle or timing inside the loop**.
 
-Events > when green flag clicked
-Control > forever
-Motion > turn clockwise (5) degrees
-Control > wait (0.05) seconds
-Or rotate a fixed amount then stop:
-
-Events > when green flag clicked
-Control > repeat (36)
-Motion > turn clockwise (10) degrees
-Control > wait (0.05) seconds
-Try it! If you want easing, continuous smooth speed, or anti-clockwise spin, say which and I’ll show the exact blocks.`
+Next hint: Which loop (forever or repeat) best fits the effect you want?`
 
     },
     {
       question: "What do I do to make my sprite move diagonally",
-      answer: `Move the sprite by changing both x and y together — that makes diagonal motion.
+      answer: `Diagonal movement happens when you **change the sprite’s x and y positions at the same time**, or **point it diagonally and move**.
 
-Assuming your sprite is “Sprite1” and rotationStyle is "all around", try one of these:
+\`\`\`snap-outline
+Event - when green flag clicked
+Control - [loop continuously OR repeat N times]
+  Motion - [change x by some amount]
+  Motion - [change y by some amount]
+  Control - [wait briefly to control speed]
+\`\`\`
 
-To move continuously down-right:
+Alternatively, you can:
+- **Point the sprite in a diagonal direction** (e.g., 45° for up-right)  
+- **Use a loop to move forward** repeatedly.
 
-Events > when green flag clicked
-Control > forever
-Motion > change x by (5)
-Motion > change y by (-5)
-Control > wait (0.02) seconds
-To move a set distance diagonally (then stop):
+Think about:
+- The **ratio between x and y changes** to control the diagonal slope.  
+- Choosing between a **forever loop** (continuous motion) or **repeat loop** (finite distance).
 
-Events > when green flag clicked
-Control > repeat (20)
-Motion > change x by (5)
-Motion > change y by (-5)
-Control > wait (0.02) seconds
-To move diagonally using direction and move:
-
-Events > when green flag clicked
-Motion > point in direction (45) (45 = up-right; 135 = up-left; -45 or 315 = down-right)
-Control > forever
-Motion > move (5) steps
-Control > wait (0.02) seconds
-Try one and tweak the numbers (x/y change, steps, or wait) for speed and direction. You’ve got this!`
+Next hint: Which approach — “manual x/y changes” or “point & move” — fits your goal better?`
     }
   ];
+
+  const LOW_SOLUTION_SNAP = `
+--- SOLUTION MODE: LOW (Snap) ---
+Provide brief guidance only. Focus on concepts, block choices, and small hints.
+Do NOT provide full scripts or full solutions.
+
+Use **Snap block outline**:
+
+- If Snap outline: wrap in \`\`\`snap-outline\`\`\` and list the exact blocks and wiring (e.g., When green flag clicked → set [var] to…, repeat until…, if…, change x by…, call custom block [Foo]).
+- Keep any pseudocode/outline to a few lines (≤ 5).
+- No complete implementations.
+- End with one line: **Next hint:** <one gentle nudge for the very next step>.
+`;
+
+const OUTPUT_STYLE_STEPS_THEN_HINT = `
+--- OUTPUT FORMAT (STRICT) ---
+Return text in **exactly** this structure:
+
+1. <first step>
+2. <second step>
+3. <third step>              // up to 5 steps total, omit extras
+
+<blank line>
+Next hint: <one short nudge for the very next step>
+
+Rules:
+- Use a **numbered list** (1., 2., 3., …) for steps — each on its own line.
+- Keep steps high-level (low-solution). No full scripts or exact numbers.
+- Always include exactly one "Next hint:" line.
+- Do not add any headings or extra text before or after this format.
+`;
+
+const REQUIREMENT_BEGINNER = `
+
+You are teaching a beginner in Snap. Be specific, friendly, and concrete.
+
+Answer concisely and factually, using only information explicitly present in the provided context.
+If the answer cannot be found in the context, reply exactly: "this is beyond my scope."
+Do not invent, guess, or expand beyond the given material.
+Use the examples as answer structure, not context material.
+
+Structure the answer using section headers (not numbers), exactly like this format:
+
+Prerequisite:
+Start with any setup or prerequisite (e.g., “Make sure your sprite is selected and visible on the stage.”).
+
+Condition (only if the query has the word "when"): 
+Include this section *only if* the question or context clearly mentions or implies a trigger, event, or sensing condition  
+(e.g., touching an edge, pressing a key, clicking a sprite, or detecting something).  
+Describe what event causes the action, and where to find related blocks in plain English  
+(e.g., “Look under the Sensing section to check when something happens,” or “Use a Control loop to keep checking.”).  
+If no such condition applies, omit this section entirely.
+
+Steps: 
+Give 2–4 short, high-level steps that combine setup, action, and response.  
+If needed, include sub-points as bullets for clarity.  
+Keep the actions in general English (“move,” “turn,” “check,” “wait briefly”) rather than full Snap block names.
+
+Improvement (optional): 
+Add one optional improvement idea, such as refining motion, adjusting speed, or adding smoother transitions.
+
+All doubts will not have all these steps - if the question does not require requisites or event sections, just keep it blank - need not put a filler.
+
+Put a blank line here. (but do not mention in actual answer)
+Next hint: Ask one short guiding question that helps the student discover the next step (e.g., “Which category has the loop that repeats an action forever?” or “What happens if you keep changing both x and y?”).
+But the Next Hint should be directly related or the next step to question asked.
+
+Avoid unnecessary explanations or entire implementations.
+Avoid naming specific Snap block text unless it helps the student find where it is (e.g., saying “find a block labeled forever under Control” is fine, but do not give the entire script).`;
+
+const REQUIREMENT_INTERMEDIATE = `
+Answer concisely and factually, using only information explicitly present in the provided context.  
+If the answer cannot be found in the context, reply exactly: "this is beyond my scope."  
+Do not invent, guess, or expand beyond the given material.  
+Use the examples as answer structure, not context material.
+
+Assume the learner is already familiar with basic Snap concepts such as sprites, loops, and event blocks.
+
+Structure your response in short, numbered steps or concise paragraphs:
+
+1. Outline how to approach it using general block categories (e.g., Motion, Control, Looks), but do not provide a full implementation or exact numeric parameters.
+2. Highlight any key relationships or logic (for example, how repeated position changes create motion, or how angles affect direction).
+3. Include one “tuning” or “optimization” idea — something the learner can experiment with, such as adjusting timing, angles, or repetition for smoother behavior.
+
+Avoid naming exact blocks unless necessary for clarity. Instead, describe actions (e.g., “adjust the sprite’s direction gradually” or “use a loop from the Control category to repeat small movements”).  
+Avoid giving full scripts or solutions.
+Add a blank line here.
+
+At the end:
+- Ask one **Next hint:** question that encourages the learner to extend or refine the solution (e.g., “Next hint: How could you make this motion faster or smoother?”).  
+- Ask one **Reflect:** question that prompts deeper reasoning (e.g., “Reflect: Why does repeating small rotations lead to a circular path?”).
+
+Keep the tone exploratory and supportive, guiding the learner to reason about *why* things work, not just *how* to do them.
+`;
 
 function topKByCosine(index, queryVec, k, threshold) {
     const scored = index.chunks.map(c => ({ ...c, score: cosine(queryVec, c.embedding) }))
@@ -108,26 +189,25 @@ function topKByCosine(index, queryVec, k, threshold) {
       {formattedExamples}
       --- USER QUESTION ---
       {question}
-      --- REQUIREMENTS ---
-      Answer concisely and factually, using only information explicitly present in the provided context.
-      If the answer cannot be found in the context, reply exactly: "this is beyond my scope."
-      Do not invent, guess, or expand beyond the given material.
-      Use the examples as answer structure, not context material.
-      Structure answers in clear sentences or short, numbered steps if instructional.
-      Avoid unnecessary explanations.
-      Instead of entire answer, take out the last line of the answer and ask the student how that step can be accomplished.
-      But add a line of encouragement for the student at the end.
-      Now generate the answer:
+
+      {lowSolution}
+
+      {outputStyle}
+
+      {requirement}
       `;
       
         const prompt = new PromptTemplate({
           template,
-          inputVariables: ["context", "formattedExamples", "question"],
+          inputVariables: ["context", "formattedExamples", "question", "lowSolution", "outputStyle","requirement"],
         });
       
         return prompt.format({
-          context: formatContexts(contexts),            // always a string
-          formattedExamples: formatExamples(examples),  // always a string
+          context: formatContexts(contexts),            
+          formattedExamples: formatExamples(examples), 
+          lowSolution : LOW_SOLUTION_SNAP,
+          outputStyle : OUTPUT_STYLE_STEPS_THEN_HINT,
+          requirement : REQUIREMENT_BEGINNER ,
           question: String(question ?? ''),
         });
       }
@@ -167,7 +247,10 @@ const examples = userExamples || [];     // [] is fine
 const prompt = await buildPrompt({
   question: question ?? '',
   contexts: hits,
-  examples
+  examples,
+  lowSolution: LOW_SOLUTION_SNAP,
+  outputStyle: OUTPUT_STYLE_STEPS_THEN_HINT,
+  requirement: REQUIREMENT_BEGINNER 
 });
 
 
@@ -180,7 +263,8 @@ body: JSON.stringify({
     prompt: prompt,       // make sure this is the string from buildPrompt.format()
     stream: false,
     options: {
-      temperature: 0.2,
+      num_predict: 220,
+      temperature: 0.1,
       stop: ['\n---', '\n# Example', '\n--- REQUIREMENTS ---']
     }
   })

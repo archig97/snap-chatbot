@@ -41,6 +41,14 @@ const json = await res.json();
 return json.embedding; // [number]
 }
 
+function cleanText(text) {
+  return text
+    .replace(/\r/g, ' ')            
+    .replace(/\s+/g, ' ')           
+    .replace(/[^\x20-\x7E\n]/g, '') 
+    .trim();
+}
+
 async function main() {
 if (!fs.existsSync(SOURCE_PDF)) {
 console.error(`
